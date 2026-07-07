@@ -36,6 +36,17 @@ async def _run_stdin(*argv: str, data: bytes) -> None:
     await proc.communicate(input=data)
 
 
+async def _run_capture(*argv: str) -> tuple[int, bytes]:
+    """argv 실행 후 (returncode, stdout) 반환. 클립보드 백업 등 출력이 필요한 경우용."""
+    proc = await asyncio.create_subprocess_exec(
+        *argv,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.DEVNULL,
+    )
+    out, _ = await proc.communicate()
+    return proc.returncode, out
+
+
 # Linux evdev 키코드 (ydotool key 용)
 EVDEV = {
     "esc": 1, "1": 2, "2": 3, "3": 4, "4": 5, "5": 6, "6": 7, "7": 8,
@@ -66,7 +77,10 @@ def ydotool_key_args(keys: list[str]) -> list[str]:
 
 
 async def exec_shell(action: dict) -> None:
-    argv = [os.path.expanduser(tok) for tok in shlex.split(action["cmd"])]
+    try:
+        argv = [os.path.expanduser(tok) for tok in shlex.split(action["cmd"])]
+    except ValueError as e:
+        raise ActionError(f"명령 파싱 실패: {e}") from e
     if not argv:
         raise ActionError("빈 명령")
     await _run(*argv)
@@ -92,14 +106,8 @@ async def exec_hotkey(action: dict) -> None:
 
 async def exec_text(action: dict) -> None:
     """클립보드 백업 → 스니펫 복사 → Ctrl+V 주입 → 클립보드 복원. 한글 등 레이아웃 무관."""
-    backup = None
-    proc = await asyncio.create_subprocess_exec(
-        "wl-paste", "--no-newline",
-        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL,
-    )
-    out, _ = await proc.communicate()
-    if proc.returncode == 0:
-        backup = out
+    rc, out = await _run_capture("wl-paste", "--no-newline")
+    backup = out if rc == 0 else None
     await _run_stdin("wl-copy", data=action["text"].encode())
     await _run(*ydotool_key_args(["ctrl", "v"]), env=YDOTOOL_ENV)
     await asyncio.sleep(0.3)

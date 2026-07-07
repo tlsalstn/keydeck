@@ -42,6 +42,9 @@ def load_config(path: Path) -> Config:
     token = server.get("token")
     if not token or not isinstance(token, str):
         raise ConfigError("server.token 필수 (문자열)")
+    if token.startswith("CHANGE-ME"):
+        raise ConfigError("server.token이 예시 그대로입니다 — 실제 토큰을 생성해 넣으세요 "
+                          "(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')")
     try:
         port = int(server.get("port", 8787))
     except (TypeError, ValueError) as e:

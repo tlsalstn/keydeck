@@ -34,6 +34,11 @@ def test_missing_token(tmp_path):
         load_config(write(tmp_path, VALID.replace('token: "secret"', "")))
 
 
+def test_placeholder_token_rejected(tmp_path):
+    with pytest.raises(ConfigError, match="token"):
+        load_config(write(tmp_path, VALID.replace('token: "secret"', 'token: "CHANGE-ME-something"')))
+
+
 def test_missing_default_page(tmp_path):
     with pytest.raises(ConfigError, match="default"):
         load_config(write(tmp_path, VALID.replace("default:", "other:")))

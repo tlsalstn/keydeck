@@ -96,6 +96,30 @@ def test_broadcast_survives_dashboard_churn():
                 assert d2.receive_json()["type"] == "key"
 
 
+def test_second_client_rejected():
+    with client.websocket_connect("/ws/client?token=test-token") as c1:
+        c1.send_json({"type": "ping"})
+        with pytest.raises(WebSocketDisconnect):
+            with client.websocket_connect("/ws/client?token=test-token") as c2:
+                c2.receive_json()  # 거부 — close 1013
+
+
+def test_second_client_close_does_not_clobber_first():
+    with client.websocket_connect("/ws/dashboard") as dash:
+        dash.receive_json()
+        with client.websocket_connect("/ws/client?token=test-token") as c1:
+            assert dash.receive_json() == {"type": "client_status", "connected": True}
+            try:
+                with client.websocket_connect("/ws/client?token=test-token") as c2:
+                    c2.receive_json()
+            except WebSocketDisconnect:
+                pass
+            # 두 번째 클라이언트 거부 후에도 첫 클라이언트 상태 유지: down 이벤트가 정상 디스패치되는지로 확인
+            c1.send_json({"type": "key", "code": 0, "event": "down", "repeat": False})
+            msg = dash.receive_json()
+            assert msg["type"] == "key" and msg["key"] == "A"
+
+
 def test_garbage_key_code_ignored(ran):
     with client.websocket_connect("/ws/client?token=test-token") as c:
         c.send_json({"type": "key", "code": "boom", "event": "down", "repeat": False})

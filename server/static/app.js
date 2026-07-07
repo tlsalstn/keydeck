@@ -102,6 +102,7 @@ function handle(msg) {
 
 function connectWS() {
   const ws = new WebSocket(`ws://${location.host}/ws/dashboard`);
+  ws.onopen = loadMapping;
   ws.onmessage = (ev) => handle(JSON.parse(ev.data));
   ws.onclose = () => setTimeout(connectWS, 2000);
 }

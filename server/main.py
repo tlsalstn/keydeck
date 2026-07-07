@@ -158,6 +158,9 @@ async def ws_client(ws: WebSocket):
     if ws.query_params.get("token") != state.config.token:
         await ws.close(code=1008)
         return
+    if state.client_ws is not None:
+        await ws.close(code=1013)  # Try Again Later — 이미 클라이언트가 연결됨
+        return
     await ws.accept()
     state.client_ws = ws
     await broadcast({"type": "client_status", "connected": True})
@@ -173,8 +176,9 @@ async def ws_client(ws: WebSocket):
     except WebSocketDisconnect:
         pass
     finally:
-        state.client_ws = None
-        await broadcast({"type": "client_status", "connected": False})
+        if state.client_ws is ws:
+            state.client_ws = None
+            await broadcast({"type": "client_status", "connected": False})
 
 
 @app.websocket("/ws/dashboard")

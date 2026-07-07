@@ -40,7 +40,8 @@ local function connect()
   ws = hs.websocket.new(url, function(event, message)
     if event == "open" then
       connected = true
-      ws:send(hs.json.encode({ type = "hello", client = "hammerspoon", version = 1 }))
+      -- 두 번째 인자 false = text 프레임 (기본은 binary — 서버 프로토콜은 text)
+      ws:send(hs.json.encode({ type = "hello", client = "hammerspoon", version = 1 }), false)
       updateMenubar()
     elseif event == "closed" or event == "fail" then
       if connected or macroMode then
@@ -87,7 +88,7 @@ local tap = hs.eventtap.new({ types.keyDown, types.keyUp }, function(e)
     code = e:getKeyCode(),
     event = (e:getType() == types.keyDown) and "down" or "up",
     ["repeat"] = isRepeat,  -- repeat는 Lua 예약어라 대괄호 표기 필수
-  }))
+  }), false)
   return true  -- 이벤트 삼킴 — macOS 앱에 전달되지 않음
 end)
 tap:start()
@@ -99,7 +100,7 @@ end)
 
 -- 앱레벨 ping (연결 유지 + 사멸 감지)
 local pingTimer = hs.timer.doEvery(30, function()
-  if connected then ws:send(hs.json.encode({ type = "ping" })) end
+  if connected then ws:send(hs.json.encode({ type = "ping" }), false) end
 end)
 
 connect()

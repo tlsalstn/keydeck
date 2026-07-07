@@ -127,3 +127,14 @@ def test_garbage_key_code_ignored(ran):
         c.send_json({"type": "key", "code": 96, "event": "down", "repeat": False})
         c.send_json({"type": "ping"})
     assert ran == ["play-pause"]  # 쓰레기 코드는 무시, 정상 코드는 실행
+
+
+def test_binary_frame_from_client_dispatches(ran):
+    """Hammerspoon hs.websocket:send()는 기본이 binary 프레임 — 서버는 text/binary 모두 수용해야 한다."""
+    import json as _json
+
+    with client.websocket_connect("/ws/client?token=test-token") as c:
+        c.send_bytes(_json.dumps(
+            {"type": "key", "code": 96, "event": "down", "repeat": False}).encode())
+        c.send_json({"type": "ping"})
+    assert ran == ["play-pause"]

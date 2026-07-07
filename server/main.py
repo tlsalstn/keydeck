@@ -166,8 +166,18 @@ async def ws_client(ws: WebSocket):
     await broadcast({"type": "client_status", "connected": True})
     try:
         while True:
+            message = await ws.receive()
+            if message["type"] == "websocket.disconnect":
+                break
+            # Hammerspoon hs.websocket:send()는 기본이 binary 프레임 — text/binary 모두 수용
+            raw = message.get("text")
+            if raw is None:
+                data = message.get("bytes")
+                if data is None:
+                    continue
+                raw = data.decode("utf-8", errors="replace")
             try:
-                msg = json.loads(await ws.receive_text())
+                msg = json.loads(raw)
             except json.JSONDecodeError:
                 continue
             if msg.get("type") == "key":

@@ -1,0 +1,14 @@
+server:
+  port: 8787
+  token: "CHANGE-ME-to-a-long-random-string"
+
+pages:
+  default:
+    F1: { label: "터미널", icon: "🖥️", action: { type: launch, app: org.kde.konsole } }
+    F2: { label: "알림 테스트", icon: "🔔", action: { type: shell, cmd: "notify-send MacPad 눌림" } }
+    F3: { label: "붙여넣기", icon: "📋", action: { type: hotkey, keys: [ctrl, shift, v] } }
+    F4: { label: "인사말", icon: "✉️", action: { type: text, text: "안녕하세요." } }
+    F5: { label: "재생/정지", icon: "⏯️", action: { type: media, op: play-pause } }
+    F6: { label: "볼륨 +", icon: "🔊", action: { type: media, op: volume-up }, repeat: true }
+    F7: { label: "오버뷰", icon: "🗂️", action: { type: kde, component: kwin, shortcut: Overview } }
+    F8: { label: "문서", icon: "🌐", action: { type: url, url: "https://kde.org" } }

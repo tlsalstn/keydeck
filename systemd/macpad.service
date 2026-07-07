@@ -1,0 +1,13 @@
+[Unit]
+Description=MacPad macro pad server
+After=network-online.target
+
+[Service]
+Environment=YDOTOOL_SOCKET=/tmp/.ydotool_socket
+WorkingDirectory=%h/Documents/macpad
+ExecStart=/usr/bin/python3 -m uvicorn server.main:app --host 0.0.0.0 --port 8787
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

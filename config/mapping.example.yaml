@@ -1,6 +1,6 @@
 server:
   port: 8787
-  token: "CHANGE-ME-to-a-long-random-string"
+  token: "CHANGE-ME-generate-with: python3 -c 'import secrets; print(secrets.token_urlsafe(32))'"
 
 pages:
   default:

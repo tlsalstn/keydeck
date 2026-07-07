@@ -58,3 +58,30 @@ def test_missing_required_action_field(tmp_path):
 def test_broken_yaml(tmp_path):
     with pytest.raises(ConfigError, match="YAML"):
         load_config(write(tmp_path, "pages: [unclosed"))
+
+
+def test_invalid_port_type(tmp_path):
+    with pytest.raises(ConfigError, match="port"):
+        load_config(write(tmp_path, VALID.replace("port: 8787", 'port: "abc"')))
+
+
+def test_null_port(tmp_path):
+    with pytest.raises(ConfigError, match="port"):
+        load_config(write(tmp_path, VALID.replace("port: 8787", "port:")))
+
+
+def test_page_bindings_not_dict(tmp_path):
+    bad = """
+server:
+  port: 8787
+  token: "secret"
+pages:
+  default: [1, 2, 3]
+"""
+    with pytest.raises(ConfigError, match="dict"):
+        load_config(write(tmp_path, bad))
+
+
+def test_repeat_not_boolean(tmp_path):
+    with pytest.raises(ConfigError, match="repeat"):
+        load_config(write(tmp_path, VALID.replace("repeat: true", 'repeat: "yes"')))

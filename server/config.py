@@ -42,7 +42,10 @@ def load_config(path: Path) -> Config:
     token = server.get("token")
     if not token or not isinstance(token, str):
         raise ConfigError("server.token 필수 (문자열)")
-    port = int(server.get("port", 8787))
+    try:
+        port = int(server.get("port", 8787))
+    except (TypeError, ValueError) as e:
+        raise ConfigError(f"server.port는 정수여야 합니다: {server.get('port')!r}") from e
 
     pages_raw = raw.get("pages")
     if not isinstance(pages_raw, dict) or "default" not in pages_raw:
@@ -51,7 +54,11 @@ def load_config(path: Path) -> Config:
     pages: dict[str, dict[str, Binding]] = {}
     for page_name, keys in pages_raw.items():
         page: dict[str, Binding] = {}
-        for key, spec in (keys or {}).items():
+        if keys is None:
+            keys = {}
+        if not isinstance(keys, dict):
+            raise ConfigError(f"페이지 {page_name}의 키 매핑은 dict여야 합니다")
+        for key, spec in keys.items():
             if key not in VALID_KEY_NAMES:
                 raise ConfigError(f"알 수 없는 키 이름: {key} (예: F1, A, Digit1, Space)")
             if not isinstance(spec, dict) or "label" not in spec or "action" not in spec:
@@ -64,12 +71,15 @@ def load_config(path: Path) -> Config:
             missing = [f for f in REQUIRED_FIELDS[atype] if f not in action]
             if missing:
                 raise ConfigError(f"{key}: {atype} 액션에 필수 필드 누락: {', '.join(missing)}")
+            repeat = spec.get("repeat", False)
+            if not isinstance(repeat, bool):
+                raise ConfigError(f"{key}: repeat는 true/false여야 합니다")
             page[key] = Binding(
                 key=key,
                 label=str(spec["label"]),
                 action=action,
                 icon=spec.get("icon"),
-                repeat=bool(spec.get("repeat", False)),
+                repeat=repeat,
             )
         pages[page_name] = page
     return Config(port=port, token=token, pages=pages)

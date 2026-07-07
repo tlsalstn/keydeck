@@ -50,7 +50,15 @@ function paint() {
     const label = document.createElement("div");
     label.className = "label";
     if (b) {
-      icon.textContent = b.icon || "";
+      if (b.icon_url) {
+        const img = document.createElement("img");
+        img.src = b.icon_url;
+        img.alt = "";
+        img.onerror = () => { img.remove(); icon.textContent = b.icon || ""; };
+        icon.append(img);
+      } else {
+        icon.textContent = b.icon || "";
+      }
       label.textContent = b.label;
       t.title = `${key} — ${b.label} (${b.type})`;
     } else {

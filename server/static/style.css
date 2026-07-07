@@ -64,3 +64,11 @@ body {
 }
 #toast.show { opacity: 1; }
 #toast.show.ok { background: #12291b; color: #c9f5d9; border-color: #1f5c35; }
+
+.tile .icon img {
+  width: clamp(18px, 2.4vw, 32px);
+  height: clamp(18px, 2.4vw, 32px);
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .5));
+}

@@ -138,3 +138,33 @@ def test_binary_frame_from_client_dispatches(ran):
             {"type": "key", "code": 96, "event": "down", "repeat": False}).encode())
         c.send_json({"type": "ping"})
     assert ran == ["play-pause"]
+
+
+def test_icon_endpoint_serves_configured_app(monkeypatch, tmp_path):
+    icon = tmp_path / "fake.png"
+    icon.write_bytes(b"\x89PNG-fake")
+    monkeypatch.setattr(main, "resolve_icon", lambda app: icon)
+    r = client.get("/api/icon/org.kde.konsole")
+    assert r.status_code == 200
+    assert r.content == b"\x89PNG-fake"
+
+
+def test_icon_endpoint_unknown_app_404(monkeypatch, tmp_path):
+    icon = tmp_path / "fake.png"
+    icon.write_bytes(b"x")
+    monkeypatch.setattr(main, "resolve_icon", lambda app: icon)
+    assert client.get("/api/icon/passwd").status_code == 404  # 설정에 없는 앱 차단
+
+
+def test_icon_endpoint_unresolvable_404(monkeypatch):
+    monkeypatch.setattr(main, "resolve_icon", lambda app: None)
+    assert client.get("/api/icon/org.kde.konsole").status_code == 404
+
+
+def test_mapping_payload_icon_url(monkeypatch, tmp_path):
+    icon = tmp_path / "i.svg"
+    icon.write_bytes(b"<svg/>")
+    monkeypatch.setattr(main, "resolve_icon", lambda app: icon)
+    body = client.get("/api/mapping").json()
+    assert body["pages"]["default"]["F1"]["icon_url"] == "/api/icon/org.kde.konsole"
+    assert "icon_url" not in body["pages"]["default"]["F5"]  # launch 외에는 없음

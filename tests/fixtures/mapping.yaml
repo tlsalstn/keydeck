@@ -3,5 +3,6 @@ server:
   token: "test-token"
 pages:
   default:
+    F1: { label: "터미널", icon: "🖥️", action: { type: launch, app: org.kde.konsole } }
     F5: { label: "재생", icon: "⏯️", action: { type: media, op: play-pause } }
     F6: { label: "볼륨+", action: { type: media, op: volume-up }, repeat: true }

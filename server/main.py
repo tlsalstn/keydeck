@@ -6,12 +6,13 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .actions import EXECUTORS, ActionError
 from .config import ConfigError, load_config
+from .icons import resolve_icon
 from .keycodes import key_name
 
 log = logging.getLogger("macpad")
@@ -97,14 +98,19 @@ async def lifespan(app):
 app = FastAPI(lifespan=lifespan)
 
 
+def _binding_payload(b) -> dict:
+    d = {"label": b.label, "icon": b.icon, "type": b.action["type"], "repeat": b.repeat}
+    # launch 앱은 호스트의 실제 테마 아이콘을 서빙 — 해석 가능할 때만 icon_url 포함
+    if b.action["type"] == "launch" and resolve_icon(b.action["app"]) is not None:
+        d["icon_url"] = f"/api/icon/{b.action['app']}"
+    return d
+
+
 def mapping_payload() -> dict:
     return {
         "active_page": state.active_page,
         "pages": {
-            name: {
-                k: {"label": b.label, "icon": b.icon, "type": b.action["type"], "repeat": b.repeat}
-                for k, b in page.items()
-            }
+            name: {k: _binding_payload(b) for k, b in page.items()}
             for name, page in state.config.pages.items()
         },
     }
@@ -113,6 +119,22 @@ def mapping_payload() -> dict:
 @app.get("/api/mapping")
 async def get_mapping():
     return mapping_payload()
+
+
+@app.get("/api/icon/{app}")
+async def get_icon(app: str):
+    configured = {
+        b.action["app"]
+        for page in state.config.pages.values()
+        for b in page.values()
+        if b.action["type"] == "launch"
+    }
+    if app not in configured:  # 설정된 launch 앱 외에는 파일 접근 자체를 차단
+        raise HTTPException(status_code=404)
+    path = resolve_icon(app)
+    if path is None:
+        raise HTTPException(status_code=404)
+    return FileResponse(path)
 
 
 @app.get("/")

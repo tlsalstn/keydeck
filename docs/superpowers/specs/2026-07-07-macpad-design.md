@@ -127,7 +127,7 @@ pages:
 
 ## 5. 호스트 서버 — Python FastAPI (`server/`)
 
-의존성: `fastapi`, `uvicorn[standard]`, `pyyaml` (venv 격리).
+의존성: 전부 Fedora 공식 RPM으로 설치 — `python3-fastapi`, `python3-uvicorn`, `python3-websockets`, `python3-pyyaml`. pip/PyPI/venv를 사용하지 않는다. 인터프리터는 Fedora 공식 `/usr/bin/python3`(3.14)을 절대 경로로 사용한다 (PATH의 linuxbrew python3이 아님 — systemd 서비스에 절대 경로 명시).
 
 ### 엔드포인트
 
@@ -205,10 +205,11 @@ pages:
 
 ## 9. 셋업 요구사항 (구현 계획에 셋업 스크립트/문서로 포함)
 
-**호스트 (Fedora):**
-1. `sudo systemctl enable --now ydotool` (uinput 모듈 로드 포함 — 현재 `/dev/uinput` 없음 확인됨)
-2. venv 생성 + 의존성 설치, systemd user 서비스 등록
-3. firewalld: 8787/tcp 허용 (LAN zone)
+**호스트 (Fedora, 전부 공식 저장소 패키지):**
+1. `sudo dnf install python3-fastapi python3-uvicorn python3-websockets python3-pyyaml playerctl` (ydotool은 설치됨)
+2. `sudo systemctl enable --now ydotool` (uinput 모듈 로드 포함 — 현재 `/dev/uinput` 없음 확인됨)
+3. systemd user 서비스 등록 (`ExecStart=/usr/bin/python3 -m uvicorn ...` 절대 경로)
+4. firewalld: 8787/tcp 허용 (LAN zone)
 
 **클라이언트 (Mac):**
 1. `brew install --cask hammerspoon`

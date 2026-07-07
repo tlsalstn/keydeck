@@ -60,6 +60,10 @@ async def check_reload() -> str | None:
         log.error("설정 리로드 실패: %s", e)
         await broadcast({"type": "config_error", "message": str(e)})
         return "error"
+    except OSError as e:
+        log.error("설정 파일 읽기 실패: %s", e)
+        await broadcast({"type": "config_error", "message": f"설정 파일 읽기 실패: {e}"})
+        return "error"
     log.info("설정 리로드됨")
     await broadcast({"type": "mapping_updated"})
     if state.client_ws is not None:
@@ -73,7 +77,10 @@ async def check_reload() -> str | None:
 async def _watch_config() -> None:
     while True:
         await asyncio.sleep(2)
-        await check_reload()
+        try:
+            await check_reload()
+        except Exception:
+            log.exception("설정 감시 오류 — 폴링 계속")
 
 
 @asynccontextmanager
@@ -81,6 +88,10 @@ async def lifespan(app):
     task = asyncio.create_task(_watch_config())
     yield
     task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
 
 
 app = FastAPI(lifespan=lifespan)

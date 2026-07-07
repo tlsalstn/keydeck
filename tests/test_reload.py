@@ -39,3 +39,18 @@ def test_invalid_config_keeps_old(tmp_path, monkeypatch):
     os.utime(cfg, (time.time() + 5, time.time() + 5))
     assert asyncio.run(main.check_reload()) == "error"
     assert main.state.config is old
+
+
+def test_config_file_vanishes_mid_reload(tmp_path, monkeypatch):
+    """stat 이후 read 이전에 파일이 사라져도 error 반환, 예외 전파 없음."""
+    cfg = use_tmp_config(tmp_path, monkeypatch)
+    cfg.write_text(cfg.read_text())
+    os.utime(cfg, (time.time() + 5, time.time() + 5))
+    real_load = main.load_config
+
+    def raising_load(path):
+        raise FileNotFoundError(f"gone: {path}")
+
+    monkeypatch.setattr(main, "load_config", raising_load)
+    assert asyncio.run(main.check_reload()) == "error"
+    monkeypatch.setattr(main, "load_config", real_load)

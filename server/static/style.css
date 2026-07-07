@@ -1,0 +1,66 @@
+:root {
+  --bg: #0b0b0e; --panel: #131318; --text: #e8e8ec; --dim: #9a9aa5;
+  --glow: #4da3ff; --ok: #38e07b; --fail: #ff4d5e;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+  font-family: system-ui, "Noto Sans KR", sans-serif;
+}
+#statusbar {
+  display: flex; gap: 16px; align-items: center; padding: 14px 24px;
+}
+.brand { font-weight: 800; letter-spacing: .25em; color: var(--dim); }
+#page-name {
+  font-size: 13px; color: var(--glow); background: #14202e;
+  padding: 3px 10px; border-radius: 99px;
+}
+.badge { font-size: 12px; padding: 3px 10px; border-radius: 99px; margin-left: auto; }
+.badge.on { background: #123b24; color: var(--ok); }
+.badge.off { background: #3b1216; color: var(--fail); }
+
+#deck {
+  max-width: 1100px; margin: 12px auto 40px; padding: 20px;
+  background: var(--panel); border-radius: 24px;
+  box-shadow: inset 0 2px 10px #000, 0 14px 44px rgba(0,0,0,.65);
+}
+.row { display: flex; gap: 10px; margin-bottom: 10px; }
+.row:last-child { margin-bottom: 0; }
+
+.tile {
+  flex: 1 1 0; height: clamp(52px, 6.5vw, 76px);
+  border-radius: 13px;
+  background: linear-gradient(180deg, #1d1d25, #121216);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 3px 6px rgba(0,0,0,.5);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; overflow: hidden;
+  transition: transform .06s ease, box-shadow .15s ease;
+}
+.tile .icon { font-size: clamp(15px, 2vw, 26px); line-height: 1; }
+.tile .label {
+  font-size: 10px; color: var(--dim); text-align: center;
+  padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%;
+}
+.tile.mapped { background: linear-gradient(180deg, #262633, #16161d); }
+.tile.mapped .label { color: var(--text); }
+.tile:not(.mapped):not(.dead) { opacity: .4; }   /* 꺼진 LCD */
+.tile.dead { opacity: .18; }                      /* 매핑 불가(모디파이어 등) */
+
+.tile.pressed {
+  transform: scale(.93);
+  box-shadow: 0 0 20px var(--glow), inset 0 0 14px rgba(77,163,255,.35);
+}
+.tile.ok { animation: glow-ok .7s ease-out; }
+.tile.fail { animation: glow-fail .9s ease-out; }
+@keyframes glow-ok   { 0% { box-shadow: 0 0 24px var(--ok); }   100% {} }
+@keyframes glow-fail { 0% { box-shadow: 0 0 24px var(--fail); } 100% {} }
+
+#toast {
+  position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%);
+  background: #2a1216; color: #ffd7db; border: 1px solid #5c1f27;
+  padding: 10px 18px; border-radius: 12px; font-size: 13px;
+  opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+#toast.show { opacity: 1; }
+#toast.show.ok { background: #12291b; color: #c9f5d9; border-color: #1f5c35; }

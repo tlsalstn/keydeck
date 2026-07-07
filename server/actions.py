@@ -1,7 +1,11 @@
 """액션 레지스트리. 실행 내용은 호스트 로컬 설정에서만 온다 — 네트워크 입력은 키 코드뿐."""
 import asyncio
+import itertools
+import json
 import os
+import re
 import shlex
+import tempfile
 from pathlib import Path
 
 YDOTOOL_ENV = {"YDOTOOL_SOCKET": os.environ.get("YDOTOOL_SOCKET", "/tmp/.ydotool_socket")}
@@ -86,8 +90,60 @@ async def exec_shell(action: dict) -> None:
     await _run(*argv)
 
 
+_kwin_seq = itertools.count(1)
+
+# 최근 포커스된(스태킹 최상위) 일치 창을 활성화. Wayland에선 KWin 스크립팅이 유일한 공식 경로.
+KWIN_ACTIVATE_JS = """\
+const target = %TARGET%;
+const s = workspace.stackingOrder;
+for (let i = s.length - 1; i >= 0; i--) {
+    const w = s[i];
+    if (w.normalWindow && w.resourceClass.toLowerCase().includes(target)) {
+        workspace.activeWindow = w;
+        break;
+    }
+}
+"""
+
+
+async def _process_running(pattern: str) -> bool:
+    proc = await asyncio.create_subprocess_exec(
+        "pgrep", "-f", pattern,
+        stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
+    await proc.wait()
+    return proc.returncode == 0
+
+
+async def _activate_window(win_class: str) -> None:
+    script = KWIN_ACTIVATE_JS.replace("%TARGET%", json.dumps(win_class.lower()))
+    fd, path = tempfile.mkstemp(prefix="macpad-kwin-", suffix=".js")
+    try:
+        os.write(fd, script.encode())
+        os.close(fd)
+        plugin = f"macpad-activate-{next(_kwin_seq)}"
+        rc, out = await _run_capture(
+            "gdbus", "call", "--session", "--dest", "org.kde.KWin",
+            "--object-path", "/Scripting",
+            "--method", "org.kde.kwin.Scripting.loadScript", path, plugin)
+        m = re.search(r"-?\d+", out.decode(errors="replace"))
+        sid = int(m.group()) if m else -1
+        if rc != 0 or sid < 0:
+            raise ActionError("KWin 스크립트 로드 실패 — 창 활성화 불가")
+        obj = f"/Scripting/Script{sid}"
+        await _run("gdbus", "call", "--session", "--dest", "org.kde.KWin",
+                   "--object-path", obj, "--method", "org.kde.kwin.Script.run")
+        await _run("gdbus", "call", "--session", "--dest", "org.kde.KWin",
+                   "--object-path", obj, "--method", "org.kde.kwin.Script.stop")
+    finally:
+        os.unlink(path)
+
+
 async def exec_launch(action: dict) -> None:
+    """실행 중이면 해당 앱 창을 포커스, 아니면 새로 실행."""
     app = action["app"]
+    if await _process_running(action.get("process", app)):
+        await _activate_window(action.get("class", app))
+        return
     for base in APP_DIRS:
         desktop = base / f"{app}.desktop"
         if desktop.exists():

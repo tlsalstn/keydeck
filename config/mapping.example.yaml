@@ -4,7 +4,9 @@ server:
 
 pages:
   default:
-    F1: { label: "터미널", icon: "🖥️", action: { type: launch, app: org.kde.konsole } }
+    # launch: 실행 중이면 창 포커스, 아니면 새로 실행.
+    #   class(선택): KWin 창 클래스 부분일치 (기본값 app), process(선택): pgrep -f 패턴 (기본값 app)
+    F1: { label: "터미널", icon: "🖥️", action: { type: launch, app: org.kde.konsole, class: org.kde.konsole, process: "^/usr/bin/konsole" } }
     F2: { label: "알림 테스트", icon: "🔔", action: { type: shell, cmd: "notify-send MacPad 눌림" } }
     F3: { label: "붙여넣기", icon: "📋", action: { type: hotkey, keys: [ctrl, shift, v] } }
     F4: { label: "인사말", icon: "✉️", action: { type: text, text: "안녕하세요." } }

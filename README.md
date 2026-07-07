@@ -96,7 +96,7 @@ pages:
 | 타입 | 필수 필드 | 실행 방법 | 비고 |
 |---|---|---|---|
 | `shell` | `cmd` | `subprocess` exec (셸 경유 없음) | 임의 명령·스크립트 |
-| `launch` | `app` | `gio launch <app>.desktop` | `/usr/share/applications`, `~/.local/share/applications`에서 탐색 |
+| `launch` | `app` | 실행 중이면 KWin 스크립팅으로 창 포커스, 아니면 `gio launch <app>.desktop` | 선택 필드 `class`(KWin 창 클래스 부분일치)·`process`(pgrep -f 패턴), 기본값은 둘 다 `app`. .desktop은 `/usr/share/applications`, `~/.local/share/applications`에서 탐색 |
 | `url` | `url` | `xdg-open` | 브라우저/URL 열기 |
 | `hotkey` | `keys` | ydotool `key` (evdev 키코드 시퀀스) | 포커스된 창에 키 조합 주입, 예: `[ctrl, shift, v]` |
 | `text` | `text` | 클립보드 백업 → `wl-copy` → ydotool Ctrl+V 주입 → 클립보드 복원 | 한글 등 레이아웃 무관 |

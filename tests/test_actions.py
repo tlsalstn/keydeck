@@ -20,9 +20,14 @@ def calls(monkeypatch):
         recorded.append((list(argv), "capture"))
         return 0, b""
 
+    async def fake_not_running(pattern):
+        recorded.append((["pgrep", "-f", pattern], "check"))
+        return False
+
     monkeypatch.setattr(actions, "_run", fake_run)
     monkeypatch.setattr(actions, "_run_stdin", fake_run_stdin)
     monkeypatch.setattr(actions, "_run_capture", fake_capture)
+    monkeypatch.setattr(actions, "_process_running", fake_not_running)
     return recorded
 
 
@@ -51,7 +56,8 @@ def test_launch_resolves_desktop_file(calls, tmp_path, monkeypatch):
     (tmp_path / "org.kde.konsole.desktop").write_text("[Desktop Entry]")
     monkeypatch.setattr(actions, "APP_DIRS", [tmp_path])
     asyncio.run(actions.exec_launch({"type": "launch", "app": "org.kde.konsole"}))
-    assert calls[0][0] == ["gio", "launch", str(tmp_path / "org.kde.konsole.desktop")]
+    gio = [c[0] for c in calls if c[0][0] == "gio"]
+    assert gio == [["gio", "launch", str(tmp_path / "org.kde.konsole.desktop")]]
 
 
 def test_launch_missing_desktop_file(monkeypatch, tmp_path):
@@ -129,3 +135,67 @@ def test_text_no_restore_when_backup_failed(calls, monkeypatch):
 def test_shell_malformed_cmd(calls):
     with pytest.raises(ActionError):
         asyncio.run(actions.exec_shell({"type": "shell", "cmd": "echo 'unbalanced"}))
+
+
+def test_launch_focuses_running_app(calls, monkeypatch):
+    """실행 중인 앱은 새로 열지 않고 창을 활성화한다."""
+    activated = []
+
+    async def running(pattern):
+        return True
+
+    async def fake_activate(cls):
+        activated.append(cls)
+
+    monkeypatch.setattr(actions, "_process_running", running)
+    monkeypatch.setattr(actions, "_activate_window", fake_activate)
+    asyncio.run(actions.exec_launch({
+        "type": "launch", "app": "org.kde.konsole",
+        "class": "konsole", "process": "^/usr/bin/konsole"}))
+    assert activated == ["konsole"]
+    assert not [c for c in calls if c[0][0] == "gio"]
+
+
+def test_launch_class_process_default_to_app(monkeypatch):
+    seen = {}
+
+    async def running(pattern):
+        seen["process"] = pattern
+        return True
+
+    async def fake_activate(cls):
+        seen["class"] = cls
+
+    monkeypatch.setattr(actions, "_process_running", running)
+    monkeypatch.setattr(actions, "_activate_window", fake_activate)
+    asyncio.run(actions.exec_launch({"type": "launch", "app": "firefox"}))
+    assert seen == {"process": "firefox", "class": "firefox"}
+
+
+def test_activate_window_gdbus_sequence(calls, monkeypatch):
+    from pathlib import Path
+
+    captured = {}
+
+    async def fake_capture(*argv):
+        captured["load_argv"] = list(argv)
+        captured["script"] = Path(argv[-2]).read_text()
+        return 0, b"(7,)"
+
+    monkeypatch.setattr(actions, "_run_capture", fake_capture)
+    asyncio.run(actions._activate_window("Konsole"))
+    assert "loadScript" in " ".join(captured["load_argv"])
+    assert '"konsole"' in captured["script"]          # 소문자 + JS 문자열 리터럴
+    assert "stackingOrder" in captured["script"]
+    gdbus = [" ".join(c[0]) for c in calls if c[0][0] == "gdbus"]
+    assert any("/Scripting/Script7" in g and g.endswith("Script.run") for g in gdbus)
+    assert any(g.endswith("Script.stop") for g in gdbus)
+
+
+def test_activate_window_load_failure(monkeypatch):
+    async def fake_capture(*argv):
+        return 0, b"(-1,)"
+
+    monkeypatch.setattr(actions, "_run_capture", fake_capture)
+    with pytest.raises(ActionError):
+        asyncio.run(actions._activate_window("konsole"))

@@ -90,3 +90,32 @@ pages:
 def test_repeat_not_boolean(tmp_path):
     with pytest.raises(ConfigError, match="repeat"):
         load_config(write(tmp_path, VALID.replace("repeat: true", 'repeat: "yes"')))
+
+
+PAGED = """
+server:
+  port: 8787
+  token: "secret"
+pages:
+  default:
+    Tab: {label: "페이지 2", action: {type: page, to: page2}}
+    F1: {label: "터미널", action: {type: launch, app: org.kde.konsole}}
+  page2:
+    Tab: {label: "메인", action: {type: page, to: default}}
+"""
+
+
+def test_page_action_valid(tmp_path):
+    cfg = load_config(write(tmp_path, PAGED))
+    assert cfg.pages["default"]["Tab"].action == {"type": "page", "to": "page2"}
+    assert cfg.pages["page2"]["Tab"].action == {"type": "page", "to": "default"}
+
+
+def test_page_action_unknown_target(tmp_path):
+    with pytest.raises(ConfigError, match="존재하지 않는 페이지"):
+        load_config(write(tmp_path, PAGED.replace("to: page2", "to: ghost")))
+
+
+def test_page_action_missing_to(tmp_path):
+    with pytest.raises(ConfigError, match="to"):
+        load_config(write(tmp_path, PAGED.replace("type: page, to: page2", "type: page")))

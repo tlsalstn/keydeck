@@ -4,9 +4,20 @@ import shutil
 import time
 from pathlib import Path
 
+import pytest
+
 import server.main as main
 
 FIXTURE = Path(__file__).parent / "fixtures" / "mapping.yaml"
+
+
+@pytest.fixture(autouse=True)
+def restore_server_state():
+    """use_tmp_config가 직접 대입한 전역 상태를 테스트 후 원복 — 파일 간 누수 방지."""
+    yield
+    main.state.config = main.load_config(FIXTURE)
+    main.state.active_page = "default"
+    main._reload_mtime = FIXTURE.stat().st_mtime
 
 
 def use_tmp_config(tmp_path, monkeypatch):
@@ -54,3 +65,16 @@ def test_config_file_vanishes_mid_reload(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "load_config", raising_load)
     assert asyncio.run(main.check_reload()) == "error"
     monkeypatch.setattr(main, "load_config", real_load)
+
+
+def test_reload_resets_missing_active_page(tmp_path, monkeypatch):
+    """활성 페이지가 리로드로 사라지면 default로 복귀."""
+    cfg = use_tmp_config(tmp_path, monkeypatch)
+    main.state.active_page = "second"
+    text = "\n".join(  # second 페이지 제거
+        line for line in cfg.read_text().splitlines()
+        if "second" not in line and "메인으로" not in line and "다음곡" not in line)
+    cfg.write_text(text)
+    os.utime(cfg, (time.time() + 5, time.time() + 5))
+    assert asyncio.run(main.check_reload()) == "reloaded"
+    assert main.state.active_page == "default"

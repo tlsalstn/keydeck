@@ -88,6 +88,7 @@ local tap = hs.eventtap.new({ types.keyDown, types.keyUp }, function(e)
     code = e:getKeyCode(),
     event = (e:getType() == types.keyDown) and "down" or "up",
     ["repeat"] = isRepeat,  -- repeat는 Lua 예약어라 대괄호 표기 필수
+    shift = e:getFlags().shift == true,  -- Shift+Tab 페이지 역방향 이동용
   }), false)
   return true  -- 이벤트 삼킴 — macOS 앱에 전달되지 않음
 end)

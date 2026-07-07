@@ -39,11 +39,13 @@ function buildDeck() {
 
 function paint() {
   const page = mapping.pages[mapping.active_page] || {};
+  const pageNames = Object.keys(mapping.pages);
   document.getElementById("page-name").textContent = mapping.active_page;
   for (const [key, t] of Object.entries(tiles)) {
     const b = page[key];
     t.classList.toggle("dead", DEAD.has(key));
     t.classList.toggle("mapped", !!b);
+    t.classList.remove("nav", "nav-active");
     t.innerHTML = "";
     const icon = document.createElement("div");
     icon.className = "icon";
@@ -61,6 +63,19 @@ function paint() {
       }
       label.textContent = b.label;
       t.title = `${key} — ${b.label} (${b.type})`;
+    } else if (key === "Tab" && pageNames.length > 1) {
+      // 미매핑 Tab/F키는 내장 페이지 내비게이션 (매핑이 항상 우선)
+      t.classList.add("nav");
+      icon.textContent = "⇆";
+      label.textContent = "페이지";
+      t.title = "Tab: 다음 페이지 / Shift+Tab: 이전 페이지";
+    } else if (/^F([1-9]|1[0-2])$/.test(key) && parseInt(key.slice(1)) <= pageNames.length) {
+      const name = pageNames[parseInt(key.slice(1)) - 1];
+      t.classList.add("nav");
+      if (name === mapping.active_page) t.classList.add("nav-active");
+      icon.textContent = "📄";
+      label.textContent = name;
+      t.title = `${key} — ${name} 페이지로 이동`;
     } else {
       label.textContent = KEYCAP[key] !== undefined ? KEYCAP[key]
         : key.startsWith("Digit") ? key.slice(5) : key;
@@ -100,6 +115,9 @@ function handle(msg) {
     const b = document.getElementById("client-badge");
     b.className = "badge " + (msg.connected ? "on" : "off");
     b.textContent = msg.connected ? "MAC 연결됨" : "MAC 연결 끊김";
+  } else if (msg.type === "page_changed") {
+    mapping.active_page = msg.page;
+    paint();
   } else if (msg.type === "mapping_updated") {
     loadMapping();
     toast("매핑 리로드됨", true);

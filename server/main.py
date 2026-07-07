@@ -66,6 +66,9 @@ async def check_reload() -> str | None:
         await broadcast({"type": "config_error", "message": f"설정 파일 읽기 실패: {e}"})
         return "error"
     log.info("설정 리로드됨")
+    if state.active_page not in state.config.pages:  # 활성 페이지가 삭제된 경우
+        state.active_page = "default"
+        await broadcast({"type": "page_changed", "page": "default"})
     await broadcast({"type": "mapping_updated"})
     if state.client_ws is not None:
         try:
@@ -159,6 +162,29 @@ async def run_action(key: str, binding) -> None:
                          "ok": False, "error": f"internal: {e}"})
 
 
+NAV_FKEYS = {f"F{i}": i for i in range(1, 13)}
+
+
+async def switch_page(to: str) -> None:
+    state.active_page = to
+    await broadcast({"type": "page_changed", "page": to})
+
+
+async def handle_nav(name: str, shift: bool) -> None:
+    """예약 내비게이션: Tab=다음, Shift+Tab=이전, F1~F12=페이지 직접 선택.
+
+    매핑된 키가 항상 우선 — 현재 페이지에서 미매핑인 키만 여기로 온다."""
+    names = list(state.config.pages)
+    if name == "Tab":
+        idx = names.index(state.active_page) if state.active_page in names else 0
+        step = -1 if shift else 1
+        await switch_page(names[(idx + step) % len(names)])
+        return
+    n = NAV_FKEYS.get(name)
+    if n is not None and n <= len(names):
+        await switch_page(names[n - 1])
+
+
 async def handle_key(msg: dict) -> None:
     try:
         code = int(msg.get("code", -1))
@@ -168,9 +194,18 @@ async def handle_key(msg: dict) -> None:
     binding = state.config.pages[state.active_page].get(name) if name else None
     await broadcast({"type": "key", "key": name, "event": msg.get("event"),
                      "mapped": binding is not None})
-    if binding is None or msg.get("event") != "down":
+    if msg.get("event") != "down":
+        return
+    if binding is None:
+        if name and not msg.get("repeat"):
+            await handle_nav(name, bool(msg.get("shift")))
         return
     if msg.get("repeat") and not binding.repeat:
+        return
+    if binding.action["type"] == "page":
+        to = binding.action["to"]
+        if to in state.config.pages:  # 리로드로 대상이 사라진 극단 케이스 방어
+            await switch_page(to)
         return
     asyncio.create_task(run_action(name, binding))
 

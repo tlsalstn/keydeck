@@ -9,6 +9,9 @@ from .keycodes import KVK_TO_NAME
 
 VALID_KEY_NAMES = set(KVK_TO_NAME.values())
 
+# 서버 상태를 바꾸는 액션 — 호스트 실행기(EXECUTORS)가 아니라 main의 디스패치가 처리
+SERVER_ACTION_FIELDS = {"page": ["to"]}
+
 
 class ConfigError(Exception):
     pass
@@ -68,12 +71,16 @@ def load_config(path: Path) -> Config:
                 raise ConfigError(f"{key}: label과 action 필수")
             action = spec["action"]
             atype = action.get("type") if isinstance(action, dict) else None
-            if atype not in EXECUTORS:
+            if atype not in EXECUTORS and atype not in SERVER_ACTION_FIELDS:
+                valid = sorted(set(EXECUTORS) | set(SERVER_ACTION_FIELDS))
                 raise ConfigError(
-                    f"{key}: 알 수 없는 액션 타입 {atype!r} (지원: {', '.join(sorted(EXECUTORS))})")
-            missing = [f for f in REQUIRED_FIELDS[atype] if f not in action]
+                    f"{key}: 알 수 없는 액션 타입 {atype!r} (지원: {', '.join(valid)})")
+            required = REQUIRED_FIELDS.get(atype) or SERVER_ACTION_FIELDS[atype]
+            missing = [f for f in required if f not in action]
             if missing:
                 raise ConfigError(f"{key}: {atype} 액션에 필수 필드 누락: {', '.join(missing)}")
+            if atype == "page" and action["to"] not in pages_raw:
+                raise ConfigError(f"{key}: 존재하지 않는 페이지로 이동: {action['to']!r}")
             repeat = spec.get("repeat", False)
             if not isinstance(repeat, bool):
                 raise ConfigError(f"{key}: repeat는 true/false여야 합니다")

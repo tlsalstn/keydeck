@@ -91,7 +91,9 @@ pages:
 - 키 이름은 물리 키 이름(`F1`…`F12`, `A`…`Z`, `Digit1`…, `Space` 등, ANSI US MacBook 기준)이며 `server/keycodes.py`의 kVK→이름 테이블 기준입니다.
 - 파일은 2초 간격으로 폴링되어 변경 시 자동 리로드됩니다. 검증 실패 시 이전 유효 설정이 유지되고 대시보드에 오류가 표시됩니다.
 
-**액션 7종:**
+**페이지 내비게이션 (내장):** 여러 페이지를 정의하면 매핑에 없는 키로 페이지를 이동할 수 있다 — `Tab` 다음 페이지, `Shift+Tab` 이전 페이지, `F1`~`F12` 페이지 직접 선택(정의 순서). **매핑된 키가 항상 우선**이므로 특정 페이지에서 F5를 액션에 바인딩했다면 그 페이지에서 F5는 페이지 이동이 아니라 액션을 실행한다. 특정 키에 페이지 이동을 명시하려면 `page` 액션을 쓴다.
+
+**액션 8종:**
 
 | 타입 | 필수 필드 | 실행 방법 | 비고 |
 |---|---|---|---|
@@ -102,6 +104,7 @@ pages:
 | `text` | `text` | 클립보드 백업 → `wl-copy` → ydotool Ctrl+V 주입 → 클립보드 복원 | 한글 등 레이아웃 무관 |
 | `media` | `op` | `playerctl`(재생 제어) / `wpctl`(볼륨) | op: `play-pause`, `next`, `previous`, `volume-up`, `volume-down`, `mute` |
 | `kde` | `component`, `shortcut` | `gdbus call` → `org.kde.kglobalaccel` invokeShortcut | KDE 전역 단축키 직접 호출 (오버뷰, 스크린샷 등) |
+| `page` | `to` | 서버 내부 상태 전환 (호스트 명령 없음) | 지정 페이지로 이동. `to`는 존재하는 페이지명이어야 함 (설정 검증) |
 
 ## Mac 셋업
 

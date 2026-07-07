@@ -168,3 +168,92 @@ def test_mapping_payload_icon_url(monkeypatch, tmp_path):
     body = client.get("/api/mapping").json()
     assert body["pages"]["default"]["F1"]["icon_url"] == "/api/icon/org.kde.konsole"
     assert "icon_url" not in body["pages"]["default"]["F5"]  # launch 외에는 없음
+
+
+@pytest.fixture
+def on_default_page():
+    main.state.active_page = "default"
+    yield
+    main.state.active_page = "default"
+
+
+def _connect_pair(dash_ctx, client_ctx):
+    pass  # 가독성용 자리 — 각 테스트에서 직접 연결
+
+
+def test_tab_cycles_next_and_wraps(on_default_page):
+    with client.websocket_connect("/ws/dashboard") as dash:
+        dash.receive_json()
+        with client.websocket_connect("/ws/client?token=test-token") as c:
+            dash.receive_json()
+            c.send_json({"type": "key", "code": 48, "event": "down", "repeat": False})  # Tab
+            assert dash.receive_json()["type"] == "key"
+            assert dash.receive_json() == {"type": "page_changed", "page": "second"}
+            c.send_json({"type": "key", "code": 48, "event": "down", "repeat": False})
+            dash.receive_json()
+            assert dash.receive_json() == {"type": "page_changed", "page": "default"}  # 순환
+
+
+def test_shift_tab_cycles_prev(on_default_page):
+    with client.websocket_connect("/ws/dashboard") as dash:
+        dash.receive_json()
+        with client.websocket_connect("/ws/client?token=test-token") as c:
+            dash.receive_json()
+            c.send_json({"type": "key", "code": 48, "event": "down",
+                         "repeat": False, "shift": True})
+            dash.receive_json()
+            assert dash.receive_json() == {"type": "page_changed", "page": "second"}  # 역방향 순환
+
+
+def test_fkey_direct_select(on_default_page):
+    with client.websocket_connect("/ws/dashboard") as dash:
+        dash.receive_json()
+        with client.websocket_connect("/ws/client?token=test-token") as c:
+            dash.receive_json()
+            c.send_json({"type": "key", "code": 120, "event": "down", "repeat": False})  # F2
+            dash.receive_json()
+            assert dash.receive_json() == {"type": "page_changed", "page": "second"}
+            # second 페이지에서 F1(미매핑) → 1번째 페이지(default)로 직접 이동
+            c.send_json({"type": "key", "code": 122, "event": "down", "repeat": False})
+            dash.receive_json()
+            assert dash.receive_json() == {"type": "page_changed", "page": "default"}
+    r = client.get("/api/mapping")
+    assert r.json()["active_page"] == "default"
+
+
+def test_mapped_key_beats_navigation(ran, on_default_page):
+    """default 페이지의 F5는 매핑(media)이 우선 — 페이지 5 이동 아님."""
+    with client.websocket_connect("/ws/client?token=test-token") as c:
+        c.send_json({"type": "key", "code": 96, "event": "down", "repeat": False})
+        c.send_json({"type": "ping"})
+    assert ran == ["play-pause"]
+    assert main.state.active_page == "default"
+
+
+def test_fkey_without_page_noop(on_default_page):
+    with client.websocket_connect("/ws/client?token=test-token") as c:
+        c.send_json({"type": "key", "code": 101, "event": "down", "repeat": False})  # F9
+        c.send_json({"type": "ping"})
+    assert main.state.active_page == "default"
+
+
+def test_page_action_binding(ran, on_default_page):
+    """second 페이지의 E 키 = page 액션 → default로 복귀, 실행기 호출 없음."""
+    main.state.active_page = "second"
+    with client.websocket_connect("/ws/dashboard") as dash:
+        dash.receive_json()
+        with client.websocket_connect("/ws/client?token=test-token") as c:
+            dash.receive_json()
+            c.send_json({"type": "key", "code": 14, "event": "down", "repeat": False})  # E
+            assert dash.receive_json()["mapped"] is True
+            assert dash.receive_json() == {"type": "page_changed", "page": "default"}
+    assert ran == []
+
+
+def test_per_page_dispatch(ran, on_default_page):
+    """같은 F5라도 페이지에 따라 다른 액션."""
+    main.state.active_page = "second"
+    with client.websocket_connect("/ws/client?token=test-token") as c:
+        c.send_json({"type": "key", "code": 96, "event": "down", "repeat": False})
+        c.send_json({"type": "ping"})
+    assert ran == ["next"]

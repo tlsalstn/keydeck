@@ -3,6 +3,7 @@ import asyncio
 import json
 import logging
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -27,7 +28,6 @@ class State:
 
 
 state = State()
-app = FastAPI()
 
 
 async def broadcast(msg: dict) -> None:
@@ -39,6 +39,51 @@ async def broadcast(msg: dict) -> None:
             dead.append(ws)
     for ws in dead:
         state.dashboards.discard(ws)
+
+
+_reload_mtime = CONFIG_PATH.stat().st_mtime if CONFIG_PATH.exists() else 0.0
+
+
+async def check_reload() -> str | None:
+    """설정 파일 mtime 변경 시 리로드. 검증 실패면 이전 설정 유지 + 오류 push."""
+    global _reload_mtime
+    try:
+        mtime = CONFIG_PATH.stat().st_mtime
+    except FileNotFoundError:
+        return None
+    if mtime == _reload_mtime:
+        return None
+    _reload_mtime = mtime
+    try:
+        state.config = load_config(CONFIG_PATH)
+    except ConfigError as e:
+        log.error("설정 리로드 실패: %s", e)
+        await broadcast({"type": "config_error", "message": str(e)})
+        return "error"
+    log.info("설정 리로드됨")
+    await broadcast({"type": "mapping_updated"})
+    if state.client_ws is not None:
+        try:
+            await state.client_ws.send_json({"type": "mapping_updated"})
+        except Exception:
+            pass
+    return "reloaded"
+
+
+async def _watch_config() -> None:
+    while True:
+        await asyncio.sleep(2)
+        await check_reload()
+
+
+@asynccontextmanager
+async def lifespan(app):
+    task = asyncio.create_task(_watch_config())
+    yield
+    task.cancel()
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 def mapping_payload() -> dict:

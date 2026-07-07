@@ -32,7 +32,7 @@ app = FastAPI()
 
 async def broadcast(msg: dict) -> None:
     dead = []
-    for ws in state.dashboards:
+    for ws in list(state.dashboards):
         try:
             await ws.send_json(msg)
         except Exception:
@@ -82,7 +82,11 @@ async def run_action(key: str, binding) -> None:
 
 
 async def handle_key(msg: dict) -> None:
-    name = key_name(int(msg.get("code", -1)))
+    try:
+        code = int(msg.get("code", -1))
+    except (TypeError, ValueError):
+        return
+    name = key_name(code)
     binding = state.config.pages[state.active_page].get(name) if name else None
     await broadcast({"type": "key", "key": name, "event": msg.get("event"),
                      "mapped": binding is not None})

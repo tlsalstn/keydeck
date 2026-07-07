@@ -81,3 +81,25 @@ def test_action_failure_pushed(monkeypatch):
             dash.receive_json()  # key push
             result = dash.receive_json()
             assert result["ok"] is False and "고장" in result["error"]
+
+
+def test_broadcast_survives_dashboard_churn():
+    # 브로드캐스트 도중 셋이 변해도 스냅샷 순회라 안전한지: 대시보드 2개 + 키 이벤트
+    with client.websocket_connect("/ws/dashboard") as d1:
+        d1.receive_json()
+        with client.websocket_connect("/ws/dashboard") as d2:
+            d2.receive_json()
+            with client.websocket_connect("/ws/client?token=test-token") as c:
+                d1.receive_json(); d2.receive_json()  # client_status push
+                c.send_json({"type": "key", "code": 96, "event": "down", "repeat": False})
+                assert d1.receive_json()["type"] == "key"
+                assert d2.receive_json()["type"] == "key"
+
+
+def test_garbage_key_code_ignored(ran):
+    with client.websocket_connect("/ws/client?token=test-token") as c:
+        c.send_json({"type": "key", "code": "boom", "event": "down", "repeat": False})
+        c.send_json({"type": "key", "code": None, "event": "down", "repeat": False})
+        c.send_json({"type": "key", "code": 96, "event": "down", "repeat": False})
+        c.send_json({"type": "ping"})
+    assert ran == ["play-pause"]  # 쓰레기 코드는 무시, 정상 코드는 실행

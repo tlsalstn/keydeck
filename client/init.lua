@@ -11,6 +11,8 @@ local macroMode = false
 local connected = false
 local ws = nil
 local menubar = hs.menubar.new()
+local swallowToggleUp = false
+local reconnectTimer = nil
 
 local function updateMenubar()
   if not connected then
@@ -46,7 +48,8 @@ local function connect()
         if macroMode then setMode(false) end  -- 페일오픈: 끊기면 모드 자동 OFF
         updateMenubar()
       end
-      hs.timer.doAfter(2, connect)
+      if reconnectTimer then reconnectTimer:stop() end
+      reconnectTimer = hs.timer.doAfter(2, connect)
     end
     -- "received": mapping_updated 등 — v1 클라이언트는 매핑을 안 쓰므로 무시
   end)
@@ -61,7 +64,18 @@ local tap = hs.eventtap.new({ types.keyDown, types.keyUp }, function(e)
   if e:getType() == types.keyDown
       and e:getKeyCode() == toggleKeyCode
       and e:getFlags():containExactly(TOGGLE_MODS) then
+    if e:getProperty(props.keyboardEventAutorepeat) ~= 0 then
+      return true  -- 오토리피트로 인한 토글 플래핑 방지
+    end
+    swallowToggleUp = true
     setMode(not macroMode)
+    return true
+  end
+  -- 토글 키의 key-up은 서버로도 macOS 앱으로도 새지 않게 삼킨다
+  if e:getType() == types.keyUp
+      and e:getKeyCode() == toggleKeyCode
+      and swallowToggleUp then
+    swallowToggleUp = false
     return true
   end
   if not macroMode then return false end
@@ -79,12 +93,12 @@ end)
 tap:start()
 
 -- 워치독: macOS가 eventtap을 조용히 비활성화하는 알려진 문제 대응
-hs.timer.doEvery(5, function()
+local watchdogTimer = hs.timer.doEvery(5, function()
   if not tap:isEnabled() then tap:start() end
 end)
 
 -- 앱레벨 ping (연결 유지 + 사멸 감지)
-hs.timer.doEvery(30, function()
+local pingTimer = hs.timer.doEvery(30, function()
   if connected then ws:send(hs.json.encode({ type = "ping" })) end
 end)
 

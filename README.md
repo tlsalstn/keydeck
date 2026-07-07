@@ -97,7 +97,7 @@ pages:
 |---|---|---|---|
 | `shell` | `cmd` | `subprocess` exec (셸 경유 없음) | 임의 명령·스크립트 |
 | `launch` | `app` | 실행 중이면 KWin 스크립팅으로 창 포커스, 아니면 `gio launch <app>.desktop` | 선택 필드 `class`(KWin 창 클래스 부분일치)·`process`(pgrep -f 패턴), 기본값은 둘 다 `app`. .desktop은 `/usr/share/applications`, `~/.local/share/applications`에서 탐색 |
-| `url` | `url` | `xdg-open` | 브라우저/URL 열기 |
+| `url` | `url` | `xdg-open` (기본), `browser` 지정 시 해당 브라우저 명령으로 실행 | 선택 필드 `browser`(예: firefox)·`class`(지정 시 열고 나서 그 창을 KWin으로 포커스). 예: GitLab을 Firefox로 열고 포커스 |
 | `hotkey` | `keys` | ydotool `key` (evdev 키코드 시퀀스) | 포커스된 창에 키 조합 주입, 예: `[ctrl, shift, v]` |
 | `text` | `text` | 클립보드 백업 → `wl-copy` → ydotool Ctrl+V 주입 → 클립보드 복원 | 한글 등 레이아웃 무관 |
 | `media` | `op` | `playerctl`(재생 제어) / `wpctl`(볼륨) | op: `play-pause`, `next`, `previous`, `volume-up`, `volume-down`, `mute` |

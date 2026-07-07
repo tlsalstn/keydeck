@@ -199,3 +199,32 @@ def test_activate_window_load_failure(monkeypatch):
     monkeypatch.setattr(actions, "_run_capture", fake_capture)
     with pytest.raises(ActionError):
         asyncio.run(actions._activate_window("konsole"))
+
+
+def test_url_with_browser_and_focus(calls, monkeypatch):
+    """browser 지정 시 해당 브라우저로 열고, class 지정 시 창을 포커스한다."""
+    detached, activated = [], []
+
+    async def fake_detached(*argv):
+        detached.append(list(argv))
+
+    async def fake_activate(cls):
+        activated.append(cls)
+
+    async def no_sleep(_):
+        pass
+
+    monkeypatch.setattr(actions, "_run_detached", fake_detached)
+    monkeypatch.setattr(actions, "_activate_window", fake_activate)
+    monkeypatch.setattr(actions.asyncio, "sleep", no_sleep)
+    asyncio.run(actions.exec_url({
+        "type": "url", "url": "https://gitlab.com/x",
+        "browser": "firefox", "class": "firefox"}))
+    assert detached == [["firefox", "https://gitlab.com/x"]]
+    assert activated == ["firefox"]
+    assert not [c for c in calls if c[0][0] == "xdg-open"]
+
+
+def test_url_default_unchanged(calls):
+    asyncio.run(actions.exec_url({"type": "url", "url": "https://example.com"}))
+    assert calls[0][0] == ["xdg-open", "https://example.com"]

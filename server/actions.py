@@ -152,8 +152,29 @@ async def exec_launch(action: dict) -> None:
     raise ActionError(f".desktop 파일 없음: {app}")
 
 
+_bg_tasks: set = set()
+
+
+async def _run_detached(*argv: str) -> None:
+    """종료를 기다리지 않는 실행 — 브라우저 최초 기동처럼 장기 상주하는 프로세스용."""
+    proc = await asyncio.create_subprocess_exec(
+        *argv, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
+    reaper = asyncio.ensure_future(proc.wait())
+    _bg_tasks.add(reaper)
+    reaper.add_done_callback(_bg_tasks.discard)
+
+
 async def exec_url(action: dict) -> None:
-    await _run("xdg-open", action["url"])
+    """URL 열기. browser 지정 시 해당 브라우저로, class 지정 시 그 창을 포커스."""
+    browser = action.get("browser")
+    if browser:
+        await _run_detached(browser, action["url"])
+    else:
+        await _run("xdg-open", action["url"])
+    win_class = action.get("class")
+    if win_class:
+        await asyncio.sleep(0.4)  # 브라우저가 탭을 넘겨받을 시간
+        await _activate_window(win_class)
 
 
 async def exec_hotkey(action: dict) -> None:

@@ -14,3 +14,5 @@ pages:
     F6: { label: "볼륨 +", icon: "🔊", action: { type: media, op: volume-up }, repeat: true }
     F7: { label: "오버뷰", icon: "🗂️", action: { type: kde, component: kwin, shortcut: Overview } }
     F8: { label: "문서", icon: "🌐", action: { type: url, url: "https://kde.org" } }
+    # url + browser/class(선택): 특정 브라우저로 열고 그 창을 포커스
+    F9: { label: "GitLab", icon: "🦝", action: { type: url, url: "https://gitlab.example.com/group/project", browser: firefox, class: firefox } }

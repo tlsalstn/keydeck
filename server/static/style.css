@@ -80,7 +80,7 @@ body {
 
 .tile { position: relative; }
 .tile .keycap {
-  position: absolute; top: 3px; left: 7px;
-  font-size: clamp(9px, 0.65vw, 11px); color: var(--dim); opacity: .75;
+  position: absolute; top: 4px; left: 8px;
+  font-size: clamp(12px, 1vw, 16px); color: var(--dim); opacity: .9;
   pointer-events: none;
 }

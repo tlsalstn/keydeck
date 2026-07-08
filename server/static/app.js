@@ -37,6 +37,11 @@ function buildDeck() {
   }
 }
 
+function keycapText(key) {
+  return KEYCAP[key] !== undefined ? KEYCAP[key]
+    : key.startsWith("Digit") ? key.slice(5) : key;
+}
+
 function paint() {
   const page = mapping.pages[mapping.active_page] || {};
   const pageNames = Object.keys(mapping.pages);
@@ -77,11 +82,17 @@ function paint() {
       label.textContent = name;
       t.title = `${key} — ${name} 페이지로 이동`;
     } else {
-      label.textContent = KEYCAP[key] !== undefined ? KEYCAP[key]
-        : key.startsWith("Digit") ? key.slice(5) : key;
+      label.textContent = keycapText(key);
       t.title = key;
     }
     t.append(icon, label);
+    if (b || t.classList.contains("nav")) {
+      // 매핑/내비 타일 좌상단에 물리 키 표기
+      const cap = document.createElement("span");
+      cap.className = "keycap";
+      cap.textContent = keycapText(key);
+      t.append(cap);
+    }
   }
 }
 

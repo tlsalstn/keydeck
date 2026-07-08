@@ -38,7 +38,7 @@ body {
 }
 .tile .icon { font-size: clamp(15px, 2vw, 26px); line-height: 1; }
 .tile .label {
-  font-size: 10px; color: var(--dim); text-align: center;
+  font-size: clamp(12px, 1.1vw, 17px); color: var(--dim); text-align: center;
   padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   max-width: 100%;
 }

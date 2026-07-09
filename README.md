@@ -1,6 +1,8 @@
-# MacPad
+# keydeck
 
-MacBook 키보드 → Fedora KDE Wayland 매크로 패드
+MacBook 키보드 → Fedora KDE Wayland 매크로 덱
+
+여분의 노트북 키보드를 네트워크 매크로 패드(Stream Deck 대체)로 만듭니다.
 
 MacBook Pro의 키보드를 백그라운드에서 캡처해 LAN으로 전송하고, Fedora 호스트가 매핑된 동작(앱 실행, 단축키 주입, 미디어 제어, 텍스트 스니펫 등)을 실행합니다. 호스트가 서빙하는 웹 대시보드에서 Stream Deck LCD 스타일로 매핑과 실시간 키 입력을 확인할 수 있습니다.
 

@@ -17,7 +17,7 @@ MacBook Pro(M1, macOS Tahoe 26.x)의 키보드를 Fedora Linux 44(KDE Plasma 6.7
 | 진행 방식 | 단계적 — v1: 코어 액션 7종 + 대시보드, v2: sequence·toggle·page |
 | 키 단위 | 단일 물리 키 = 버튼 1개 (모디파이어 조합 없음, Stream Deck 방식) |
 | 웹 기능 | 뷰어 전용 (매핑 편집은 호스트 설정 파일로) |
-| 네트워크 | LAN (호스트 192.168.0.127), 포트 8787, 공유 토큰 인증 |
+| 네트워크 | LAN (호스트 `<host-ip>`), 포트 8787, 공유 토큰 인증 |
 | 서버 스택 | Python + FastAPI |
 | 토글 단축키 | ⌘⌥⌃M |
 

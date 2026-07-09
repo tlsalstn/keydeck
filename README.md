@@ -63,7 +63,7 @@ systemctl --user status macpad --no-pager | head -5
 기대 결과: `Active: active (running)`. LAN 접근 확인:
 
 ```bash
-curl -s http://192.168.0.127:8787/api/mapping | head -c 80
+curl -s http://<host-ip>:8787/api/mapping | head -c 80
 ```
 
 ### 3. `config/mapping.yaml` 편집
@@ -120,7 +120,7 @@ pages:
 
 - **⌘⌥⌃M**: 매크로 모드 토글. 메뉴바 아이콘: `⌨` 대기 / `🟢⌨` ON / `⚠️⌨` 연결 끊김
 - 매크로 모드 ON이면 전체 키보드가 패드가 되어 macOS로 키가 전달되지 않습니다 (모디파이어 조합 없이 단일 물리 키 = 버튼 1개, Stream Deck 방식). 다시 ⌘⌥⌃M을 누르면 OFF되고 키보드가 즉시 정상 복귀합니다.
-- 대시보드: `http://192.168.0.127:8787` (Mac 브라우저에서 접속, 뷰어 전용 — 매핑 편집은 웹에서 불가, `config/mapping.yaml`을 직접 수정)
+- 대시보드: `http://<host-ip>:8787` (Mac 브라우저에서 접속, 뷰어 전용 — 매핑 편집은 웹에서 불가, `config/mapping.yaml`을 직접 수정)
 
 ## 트러블슈팅
 

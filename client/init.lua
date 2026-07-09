@@ -1,7 +1,7 @@
 -- MacPad client: 키 캡처+전송만. 매핑 해석·실행은 전부 서버(mapping.yaml)가 한다.
 -- 설치: ~/.hammerspoon/init.lua 로 복사(또는 require), HOST/TOKEN 수정.
 
-local HOST = "192.168.0.127"
+local HOST = "CHANGE-ME-host-ip"  -- 호스트 LAN IP (예: 192.168.0.10)
 local PORT = 8787
 local TOKEN = "CHANGE-ME-to-a-long-random-string"
 local TOGGLE_MODS = { "cmd", "alt", "ctrl" }  -- 토글 단축키 ⌘⌥⌃M

@@ -85,7 +85,10 @@ class Client:
             async for ev in dev.async_read_loop():
                 await self._handle(ev)
         except OSError:
-            pass  # 장치 분리 등
+            # 장치 오류/분리 — grab 중이었다면 전체 fail-open으로 키보드를 되돌린다
+            if self.grabbed:
+                self._fail_open()
+                notify("keydeck", "입력 장치 오류 — 매크로 모드 해제")
 
     async def run(self) -> None:
         readers = [asyncio.create_task(self._read(d)) for d in self.devices]

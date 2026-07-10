@@ -186,11 +186,13 @@ async def handle_nav(name: str, shift: bool) -> None:
 
 
 async def handle_key(msg: dict) -> None:
-    try:
-        code = int(msg.get("code", -1))
-    except (TypeError, ValueError):
-        return
-    name = key_name(code)
+    name = msg.get("key")
+    if not isinstance(name, str):
+        try:
+            code = int(msg.get("code", -1))
+        except (TypeError, ValueError):
+            return
+        name = key_name(code)
     binding = state.config.pages[state.active_page].get(name) if name else None
     await broadcast({"type": "key", "key": name, "event": msg.get("event"),
                      "mapped": binding is not None})

@@ -257,3 +257,30 @@ def test_per_page_dispatch(ran, on_default_page):
         c.send_json({"type": "key", "code": 96, "event": "down", "repeat": False})
         c.send_json({"type": "ping"})
     assert ran == ["next"]
+
+
+def test_key_by_name_dispatches(ran):
+    """key 이름 직접 전송 경로 (리눅스 클라이언트)."""
+    with client.websocket_connect("/ws/client?token=test-token") as c:
+        c.send_json({"type": "key", "key": "F5", "event": "down", "repeat": False})
+        c.send_json({"type": "ping"})
+    assert ran == ["play-pause"]
+
+
+def test_key_by_name_navigation(on_default_page):
+    """이름 경로에서도 Tab 페이지 내비게이션 동작."""
+    with client.websocket_connect("/ws/dashboard") as dash:
+        dash.receive_json()
+        with client.websocket_connect("/ws/client?token=test-token") as c:
+            dash.receive_json()
+            c.send_json({"type": "key", "key": "Tab", "event": "down", "repeat": False})
+            assert dash.receive_json()["type"] == "key"
+            assert dash.receive_json() == {"type": "page_changed", "page": "second"}
+
+
+def test_code_path_still_works(ran):
+    """기존 kVK code 경로 회귀 (Mac 클라이언트)."""
+    with client.websocket_connect("/ws/client?token=test-token") as c:
+        c.send_json({"type": "key", "code": 96, "event": "down", "repeat": False})
+        c.send_json({"type": "ping"})
+    assert ran == ["play-pause"]

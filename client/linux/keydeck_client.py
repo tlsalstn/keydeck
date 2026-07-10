@@ -71,8 +71,11 @@ class Client:
             return
         decision = self.mode.process(key_name(ev.code), event)
         if decision["toggle"]:
-            self._set_grab(self.mode.macro_on)
             notify("keydeck", "매크로 모드 ON" if self.mode.macro_on else "매크로 모드 OFF")
+        if decision["grab"] is True:
+            self._set_grab(True)
+        elif decision["grab"] is False:
+            self._set_grab(False)
         msg = decision["message"]
         if msg is not None and self.ws is not None:
             try:
@@ -84,14 +87,18 @@ class Client:
         try:
             async for ev in dev.async_read_loop():
                 await self._handle(ev)
-        except OSError:
+        except Exception:
             # 장치 오류/분리 — grab 중이었다면 전체 fail-open으로 키보드를 되돌린다
+            # (OSError뿐 아니라 evdev가 던질 수 있는 다른 예외도 포괄; CancelledError는
+            # BaseException이라 여기 걸리지 않아 종료 경로에는 영향 없음)
             if self.grabbed:
                 self._fail_open()
                 notify("keydeck", "입력 장치 오류 — 매크로 모드 해제")
 
     async def run(self) -> None:
         readers = [asyncio.create_task(self._read(d)) for d in self.devices]
+        connected_before = False
+        notified_waiting = False
         try:
             while True:
                 try:
@@ -100,6 +107,8 @@ class Client:
                         self.ws = ws
                         await ws.send(json.dumps(
                             {"type": "hello", "client": "linux", "version": 1}))
+                        connected_before = True
+                        notified_waiting = False
                         notify("keydeck", "서버 연결됨")
                         async for _ in ws:  # 서버 push는 무시, 연결 유지 (라이브러리가 ping 처리)
                             pass
@@ -107,7 +116,14 @@ class Client:
                     pass
                 self.ws = None
                 self._fail_open()
-                notify("keydeck", "서버 연결 끊김 — 재연결 중")
+                if connected_before:
+                    # 연결됨 → 끊김 전환 시점에만 알림 (재시도마다 스팸 방지)
+                    notify("keydeck", "서버 연결 끊김 — 재연결 중")
+                    connected_before = False
+                elif not notified_waiting:
+                    # 최초 연결 전 반복 실패 — 한 번만 알림
+                    notify("keydeck", "서버 연결 대기 중")
+                    notified_waiting = True
                 await asyncio.sleep(2)
         finally:
             for r in readers:
@@ -120,6 +136,7 @@ def main() -> None:
     if not devices:
         raise SystemExit("키보드 장치를 찾지 못했습니다 (input 그룹 소속 확인)")
     client = Client(devices)
+    signal.signal(signal.SIGCHLD, signal.SIG_IGN)  # notify-send 자식 자동 회수 (좀비 방지)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     for sig in (signal.SIGINT, signal.SIGTERM):

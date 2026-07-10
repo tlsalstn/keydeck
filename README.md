@@ -35,7 +35,7 @@
 |---|---|---|
 | 호스트 서버 | `python3-fastapi python3-uvicorn python3-websockets python3-pyyaml playerctl ydotool` | `python3-fastapi python3-uvicorn python3-websockets python3-yaml playerctl ydotool` |
 | 호스트 개발(테스트) | `python3-pytest python3-httpx` | `python3-pytest python3-httpx` |
-| 리눅스 클라이언트 | `python3-evdev python3-websockets libnotify` | `python3-evdev python3-websockets libnotify` |
+| 리눅스 클라이언트 | `python3-evdev python3-websockets libnotify` | `python3-evdev python3-websockets libnotify-bin` |
 
 - 패키지명 차이: PyYAML이 Fedora는 `python3-pyyaml`, Kubuntu는 `python3-yaml`.
 - 오디오 볼륨 액션은 **PipeWire(`wpctl`)와 PulseAudio(`pactl`)를 자동 감지**합니다. 재생 제어는 `playerctl`(MPRIS)로 백엔드 무관.
@@ -180,6 +180,6 @@ pages:
 
 **macOS 클라이언트**: ⌘⌥⌃M 토글·메뉴바 상태, 매핑 키 실행, 미매핑 키 삼킴, 서버 중지 시 자동 OFF·키보드 복귀·재연결, Secure Input 경계, 토글 longpress 플래핑 없음.
 
-**리눅스 클라이언트 (Kubuntu)**: 서비스 시작 → "서버 연결됨" 알림, Ctrl+Alt+M 토글·알림, 매크로 모드 중 로컬 세션에 키 미전달(grab), 서버 중지 → 알림 + 즉시 키보드 복귀(ungrab) + 재연결, 프로세스 kill → 커널 grab 자동 해제.
+**리눅스 클라이언트 (Kubuntu)**: 서비스 시작 → "서버 연결됨" 알림, Ctrl+Alt+M 토글·알림, 매크로 모드 중 로컬 세션에 키 미전달(grab), 서버 중지 → 알림 + 즉시 키보드 복귀(ungrab) + 재연결, 프로세스 kill → 커널 grab 자동 해제, fail-open 직후 유령 모디파이어 없음 — Ctrl/Alt가 눌린 상태로 남지 않고 즉시 정상 타이핑 가능.
 
 **호스트를 Kubuntu로 운영 시**: 볼륨(pactl 경로), 창 포커스(KWin), `kde` 액션 동작 확인.

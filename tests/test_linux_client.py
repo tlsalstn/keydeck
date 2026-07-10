@@ -43,3 +43,21 @@ def test_reader_error_without_grab_is_silent(monkeypatch):
     c = Client([dev])
     asyncio.run(c._read(dev))
     assert c.grabbed is False and notified == []
+
+
+def test_reader_nonos_error_fails_open(monkeypatch):
+    monkeypatch.setattr(keydeck_client, "notify", lambda *a, **k: None)
+
+    class BoomDev(FakeDev):
+        async def async_read_loop(self):
+            raise RuntimeError("boom")
+            yield  # pragma: no cover
+
+    dev = BoomDev()
+    c = Client([dev])
+    c.grabbed = True
+    c.mode.macro_on = True
+    asyncio.run(c._read(dev))
+    assert c.grabbed is False
+    assert dev.ungrabbed is True
+    assert c.mode.macro_on is False

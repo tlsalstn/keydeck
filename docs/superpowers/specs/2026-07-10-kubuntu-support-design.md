@@ -91,7 +91,7 @@ evdev·WS I/O 없이 테스트 가능한 결정 로직.
 | 역할 | Fedora (dnf) | Kubuntu (apt) |
 |---|---|---|
 | 서버 | python3-fastapi python3-uvicorn python3-websockets python3-pyyaml playerctl wireplumber ydotool | python3-fastapi python3-uvicorn python3-websockets **python3-yaml** playerctl wireplumber ydotool |
-| 리눅스 클라이언트 | python3-evdev python3-websockets libnotify | python3-evdev python3-websockets libnotify |
+| 리눅스 클라이언트 | python3-evdev python3-websockets libnotify | python3-evdev python3-websockets libnotify-bin |
 
 - 클라이언트 사용자는 `input` 그룹 소속 필요(이미 충족 확인).
 - 클라이언트 상시 구동: systemd **user** 서비스 `keydeck-client.service`(`ExecStart=/usr/bin/python3 -m client.linux.keydeck_client` 또는 절대 경로 스크립트).

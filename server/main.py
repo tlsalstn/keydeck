@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .actions import EXECUTORS, ActionError
-from .config import ConfigError, load_config
+from .config import ConfigError, VALID_KEY_NAMES, load_config
 from .icons import resolve_icon
 from .keycodes import key_name
 
@@ -187,7 +187,10 @@ async def handle_nav(name: str, shift: bool) -> None:
 
 async def handle_key(msg: dict) -> None:
     name = msg.get("key")
-    if not isinstance(name, str):
+    if isinstance(name, str):
+        if name not in VALID_KEY_NAMES:  # 이름 공간 밖 입력은 무시 (브로드캐스트도 금지)
+            return
+    else:
         try:
             code = int(msg.get("code", -1))
         except (TypeError, ValueError):

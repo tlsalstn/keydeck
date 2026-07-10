@@ -284,3 +284,17 @@ def test_code_path_still_works(ran):
         c.send_json({"type": "key", "code": 96, "event": "down", "repeat": False})
         c.send_json({"type": "ping"})
     assert ran == ["play-pause"]
+
+
+def test_invalid_key_name_ignored(ran, on_default_page):
+    """이름 공간 밖 key는 무시 — 실행도, 대시보드 push도 없음."""
+    with client.websocket_connect("/ws/dashboard") as dash:
+        dash.receive_json()
+        with client.websocket_connect("/ws/client?token=test-token") as c:
+            dash.receive_json()  # client_status
+            c.send_json({"type": "key", "key": "__proto__", "event": "down", "repeat": False})
+            c.send_json({"type": "key", "key": "NotAKey", "event": "down", "repeat": False})
+            c.send_json({"type": "key", "key": "F5", "event": "down", "repeat": False})
+            first = dash.receive_json()  # 무효 이름 2개는 push가 없어야 하므로 첫 push는 F5
+            assert first == {"type": "key", "key": "F5", "event": "down", "mapped": True}
+    assert ran == ["play-pause"]

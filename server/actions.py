@@ -5,6 +5,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -192,14 +193,26 @@ async def exec_text(action: dict) -> None:
         await _run_stdin("wl-copy", data=backup)
 
 
-MEDIA_OPS = {
-    "play-pause": ["playerctl", "play-pause"],
-    "next": ["playerctl", "next"],
-    "previous": ["playerctl", "previous"],
-    "volume-up": ["wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@", "5%+"],
-    "volume-down": ["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%-"],
-    "mute": ["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"],
-}
+def _media_ops() -> dict:
+    """오디오 백엔드 감지: PipeWire(wpctl) 우선, 없으면 PulseAudio(pactl).
+    playerctl(MPRIS)은 백엔드 무관이라 항상 포함."""
+    ops = {
+        "play-pause": ["playerctl", "play-pause"],
+        "next": ["playerctl", "next"],
+        "previous": ["playerctl", "previous"],
+    }
+    if shutil.which("wpctl"):
+        ops["volume-up"] = ["wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@", "5%+"]
+        ops["volume-down"] = ["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%-"]
+        ops["mute"] = ["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"]
+    elif shutil.which("pactl"):
+        ops["volume-up"] = ["pactl", "set-sink-volume", "@DEFAULT_SINK@", "+5%"]
+        ops["volume-down"] = ["pactl", "set-sink-volume", "@DEFAULT_SINK@", "-5%"]
+        ops["mute"] = ["pactl", "set-sink-mute", "@DEFAULT_SINK@", "toggle"]
+    return ops
+
+
+MEDIA_OPS = _media_ops()
 
 
 async def exec_media(action: dict) -> None:

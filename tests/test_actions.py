@@ -228,3 +228,27 @@ def test_url_with_browser_and_focus(calls, monkeypatch):
 def test_url_default_unchanged(calls):
     asyncio.run(actions.exec_url({"type": "url", "url": "https://example.com"}))
     assert calls[0][0] == ["xdg-open", "https://example.com"]
+
+
+def test_media_ops_pipewire(monkeypatch):
+    monkeypatch.setattr(actions.shutil, "which",
+                        lambda c: "/usr/bin/wpctl" if c == "wpctl" else None)
+    ops = actions._media_ops()
+    assert ops["volume-up"][0] == "wpctl"
+    assert ops["play-pause"] == ["playerctl", "play-pause"]
+
+
+def test_media_ops_pulseaudio(monkeypatch):
+    monkeypatch.setattr(actions.shutil, "which",
+                        lambda c: None if c == "wpctl" else "/usr/bin/pactl")
+    ops = actions._media_ops()
+    assert ops["volume-up"] == ["pactl", "set-sink-volume", "@DEFAULT_SINK@", "+5%"]
+    assert ops["volume-down"] == ["pactl", "set-sink-volume", "@DEFAULT_SINK@", "-5%"]
+    assert ops["mute"] == ["pactl", "set-sink-mute", "@DEFAULT_SINK@", "toggle"]
+
+
+def test_media_ops_no_backend_keeps_playerctl(monkeypatch):
+    monkeypatch.setattr(actions.shutil, "which", lambda c: None)
+    ops = actions._media_ops()
+    assert ops["play-pause"] == ["playerctl", "play-pause"]
+    assert "volume-up" not in ops  # 백엔드 없으면 볼륨 op 미제공

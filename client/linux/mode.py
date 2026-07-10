@@ -15,6 +15,12 @@ class MacroMode:
         self.macro_on = False
         self._toggling = False
 
+    def reset(self) -> None:
+        """연결 끊김 등 fail-open 시 호출 — 유령 모디파이어/토글 상태 제거."""
+        self.mods.clear()
+        self.macro_on = False
+        self._toggling = False
+
     def process(self, name, event):
         if name is None:
             return dict(NOOP)

@@ -1,0 +1,15 @@
+[Unit]
+Description=keydeck Linux client (evdev macro pad)
+After=graphical-session.target
+
+[Service]
+Environment=KEYDECK_HOST=CHANGE-ME-host-ip
+Environment=KEYDECK_PORT=8787
+Environment=KEYDECK_TOKEN=CHANGE-ME-token
+WorkingDirectory=%h/Documents/macpad
+ExecStart=/usr/bin/python3 -m client.linux.keydeck_client
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

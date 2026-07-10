@@ -84,3 +84,18 @@ def test_none_name_noop():
     m = MacroMode()
     toggle_on(m); m.process("M", "up"); m.process("Ctrl", "up"); m.process("Alt", "up")
     assert m.process(None, "down") == {"toggle": False, "message": None}
+
+
+def test_reset_clears_ghost_state():
+    m = MacroMode()
+    m.process("Ctrl", "down")
+    m.process("Alt", "down")
+    m.process("M", "down")          # 토글 ON, _toggling=True
+    m.reset()                        # fail-open (M up 유실 가정)
+    assert m.macro_on is False
+    # 유령 Ctrl+Alt가 제거되어 일반 M이 토글로 오인되지 않는다
+    d = m.process("M", "down")
+    assert d == {"toggle": False, "message": None}
+    # 정상 조합은 다시 동작
+    m.process("Ctrl", "down"); m.process("Alt", "down")
+    assert m.process("M", "down")["toggle"] is True
